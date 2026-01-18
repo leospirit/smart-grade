@@ -40,7 +40,7 @@ export const LoginPage: React.FC = () => {
 
             message.success('Login successful!');
 
-            if (role === 'admin') {
+            if (role === 'admin' || role === 'teacher') {
                 navigate('/admin');
             } else {
                 navigate('/parent');

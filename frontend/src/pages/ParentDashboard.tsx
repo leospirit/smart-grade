@@ -59,7 +59,7 @@ export const ParentDashboard: React.FC = () => {
             // 3. Process Data for Charts
             if (myStudent.grades) {
                 // Fetch Visibility
-                const coursesRes = await axios.get(`${API_URL}/api/courses`);
+                const coursesRes = await axios.get(`${API_URL}/courses`);
                 const visibleMap: Record<string, boolean> = {};
                 coursesRes.data.forEach((c: any) => visibleMap[c.name] = c.is_visible);
 

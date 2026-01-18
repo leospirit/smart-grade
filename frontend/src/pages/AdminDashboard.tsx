@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, Upload, Table, message, Card, Statistic, Row, Col, Select, Segmented, Dropdown, Input, Modal, Steps, Form, Tag, Divider, Alert } from 'antd';
-import { UploadOutlined, UserOutlined, BookOutlined, BarChartOutlined, InboxOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, EyeInvisibleOutlined, CloudUploadOutlined, ArrowRightOutlined, LineChartOutlined } from '@ant-design/icons';
+import { Layout, Menu, Button, Upload, Table, message, Card, Statistic, Row, Col, Select, Segmented, Dropdown, Input, Modal, Steps, Divider, Alert, Form } from 'antd';
+import { UploadOutlined, UserOutlined, BookOutlined, BarChartOutlined, InboxOutlined, EyeOutlined, EyeInvisibleOutlined, CloudUploadOutlined, LineChartOutlined, DeleteOutlined, PlusOutlined, ArrowRightOutlined, KeyOutlined } from '@ant-design/icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ScatterChart, Scatter, LabelList, LineChart, Line } from 'recharts';
 import axios from 'axios';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
@@ -8,7 +8,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStr
 import { useReactToPrint } from 'react-to-print';
 import { StudentReport } from '../components/StudentReport';
 import { CSS } from '@dnd-kit/utilities';
-
+import { AccountsManager } from '../components/AccountsManager';
 const { Header, Content, Footer, Sider } = Layout;
 const { Dragger } = Upload;
 const { Option } = Select;
@@ -48,11 +48,32 @@ interface Student {
 }
 
 export const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('1');
+  const [activeTab, setActiveTab] = useState('roster');
+  const [currentUser, setCurrentUser] = useState<{ username: string, role: string } | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // --- Import Wizard State ---
+  useEffect(() => {
+    // Load initial data
+    fetchStudents();
+    fetchCourseVisibility();
+    checkConnection();
+    fetchCurrentUser();
+  }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const res = await axios.get(`${API_URL}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCurrentUser(res.data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch user info");
+    }
+  };
   const [courseName, setCourseName] = useState('English'); // Moved up
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -81,6 +102,25 @@ export const AdminDashboard = () => {
   const [courseList, setCourseList] = useState<string[]>([]);
   const [courseVisibility, setCourseVisibility] = useState<Record<string, boolean>>({});
   const [selectedAnalysisCourse, setSelectedAnalysisCourse] = useState<string>('');
+  const [isChangePassOpen, setIsChangePassOpen] = useState(false);
+  const [passForm] = Form.useForm();
+
+  const handleChangePassword = async (values: any) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/users/me/password`, {
+        old_password: values.old_password,
+        new_password: values.new_password
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      message.success('Password changed successfully');
+      setIsChangePassOpen(false);
+      passForm.resetFields();
+    } catch (e: any) {
+      message.error(e.response?.data?.detail || 'Failed to change password');
+    }
+  };
 
   const handlePreview = async (options: any) => {
     const { file, onSuccess, onError } = options;
@@ -977,22 +1017,42 @@ export const AdminDashboard = () => {
           </Card>
         </Card >
       </div >
-    )
-  }
+    );
+  };
+
+
+
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider collapsible>
         <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', color: 'white', textAlign: 'center', lineHeight: '32px', fontWeight: 'bold' }}>SmartGrade</div>
-        <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline" onClick={(e) => setActiveTab(e.key)}>
-          <Menu.Item key="1" icon={<BarChartOutlined />}>Dashboard</Menu.Item>
-          <Menu.Item key="2" icon={<UserOutlined />}>Student Roster</Menu.Item>
-          <Menu.Item key="3" icon={<UploadOutlined />}>Upload Grades</Menu.Item>
-          <Menu.Item key="4" icon={<InboxOutlined />}>Settings (Roster)</Menu.Item>
-        </Menu>
+        <Menu
+          theme="dark"
+          selectedKeys={[activeTab]}
+          mode="inline"
+          onClick={(e) => setActiveTab(e.key)}
+          items={[
+            { key: 'roster', icon: <UserOutlined />, label: 'Student Roster' },
+            { key: 'grades', icon: <CloudUploadOutlined />, label: 'Upload Grades' },
+            { key: 'analytics', icon: <BarChartOutlined />, label: 'Analytics' },
+            ...(currentUser?.role === 'admin' ? [{ key: 'accounts', icon: <UserOutlined />, label: 'Accounts' }] : [])
+          ]}
+        />
       </Sider>
       <Layout className="site-layout">
-        <Header className="site-layout-background" style={{ padding: 0, background: '#fff' }} />
+        <Header className="site-layout-background" style={{ padding: '0 24px', background: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+          {currentUser && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span>Welcome, <b>{currentUser.username}</b> ({currentUser.role})</span>
+              <Button icon={<KeyOutlined />} onClick={() => setIsChangePassOpen(true)}>Change Password</Button>
+              <Button onClick={() => {
+                localStorage.clear();
+                window.location.href = '/login';
+              }}>Logout</Button>
+            </div>
+          )}
+        </Header>
         <Content style={{ margin: '16px' }}>
           <div className="site-layout-background" style={{ padding: 24, minHeight: 360 }}>
             {connStatus && (
@@ -1008,15 +1068,57 @@ export const AdminDashboard = () => {
               Current API: <b>{API_URL}</b> (If this is localhost, external devices cannot connect)
             </div>
 
-            {activeTab === '1' && <Analytics />}
-            {activeTab === '2' && <StudentTable />}
-            {activeTab === '3' && <UploadGrade />}
-            {activeTab === '4' && <UploadRoster />}
+            {activeTab === 'analytics' && <Analytics />}
+
+            {activeTab === 'roster' && (
+              students.length === 0 ? <UploadRoster onSuccess={fetchStudents} /> : <StudentTable />
+            )}
+
+            {activeTab === 'grades' && <UploadGrade onUploadSuccess={fetchStudents} />}
+
+            {activeTab === 'accounts' && <AccountsManager currentUser={currentUser} apiUrl={API_URL} />}
           </div>
         </Content>
         <Footer style={{ textAlign: 'center' }}>
           Smart Grade Platform ©2026 Created by Antigravity | Connected to: {API_URL}
         </Footer>
+        <Modal
+          title="Change Password"
+          open={isChangePassOpen}
+          onCancel={() => setIsChangePassOpen(false)}
+          onOk={() => passForm.submit()}
+        >
+          <Form form={passForm} onFinish={handleChangePassword} layout="vertical">
+            <Form.Item name="old_password" label="Current Password" rules={[{ required: true }]}>
+              <Input.Password />
+            </Form.Item>
+            <Form.Item
+              name="new_password"
+              label="New Password"
+              rules={[{ required: true }, { min: 6, message: 'Min 6 chars' }]}
+            >
+              <Input.Password />
+            </Form.Item>
+            <Form.Item
+              name="confirm_password"
+              label="Confirm Password"
+              dependencies={['new_password']}
+              rules={[
+                { required: true },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('new_password') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error('Passwords do not match!'));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password />
+            </Form.Item>
+          </Form>
+        </Modal>
       </Layout>
     </Layout>
   );

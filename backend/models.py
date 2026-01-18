@@ -47,5 +47,7 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String) # "admin" or "student"
     student_id = Column(Integer, ForeignKey("students.id"), nullable=True)
+    is_password_changed = Column(Boolean, default=False)
+    initial_password = Column(String, nullable=True) 
 
     student = relationship("Student")

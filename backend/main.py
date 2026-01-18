@@ -464,7 +464,9 @@ def export_roster(class_name: str = None, db: Session = Depends(get_db)):
     return StreamingResponse(output, headers=headers, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.delete("/api/courses/{course_name}")
-def delete_course(course_name: str, db: Session = Depends(get_db)):
+def delete_course(course_name: str, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can delete courses")
     students = db.query(models.Student).all()
     count = 0
     for s in students:
@@ -476,6 +478,8 @@ def delete_course(course_name: str, db: Session = Depends(get_db)):
             db.add(s) # Mark as modified
             count += 1
     db.commit()
+    # Also delete from Course table
+    crud.delete_course_by_name(db, course_name)
     return {"message": f"Course '{course_name}' deleted from {count} students."}
 
 @app.get("/api/courses")
@@ -496,6 +500,56 @@ def toggle_course_visibility(course_name: str, db: Session = Depends(get_db)):
     course.is_visible = not course.is_visible
     db.commit()
     return {"message": f"Course '{course_name}' visibility set to {course.is_visible}", "is_visible": course.is_visible}
+
+# --- User Management Endpoints ---
+
+@app.get("/api/users", response_model=List[schemas.User])
+async def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can view users")
+    return crud.get_users(db, skip=skip, limit=limit)
+
+@app.post("/api/users", response_model=schemas.User)
+async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can create users")
+    db_user = crud.get_user_by_username(db, username=user.username)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    return crud.create_user(db=db, user=user)
+
+@app.delete("/api/users/{user_id}")
+async def delete_user(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can delete users")
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    if not crud.delete_user(db, user_id):
+         raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted"}
+
+@app.post("/api/users/{user_id}/reset-password")
+async def reset_password(user_id: int, request: schemas.PasswordReset, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can reset passwords")
+    
+    updated_user = crud.reset_user_password(db, user_id, request.new_password)
+    if not updated_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "Password reset successfully"}
+
+@app.post("/api/users/me/password")
+async def change_password(request: schemas.PasswordChange, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_active_user)):
+    if current_user.role in ["parent", "student"]:
+        raise HTTPException(status_code=403, detail="Parents/Students cannot change password")
+    
+    # Verify old password
+    if not auth.verify_password(request.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect old password")
+    
+    updated_user = crud.update_user_password(db, current_user.id, request.new_password)
+    return {"message": "Password changed successfully"}
 
 if __name__ == "__main__":
     import uvicorn

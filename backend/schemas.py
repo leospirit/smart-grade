@@ -19,12 +19,25 @@ class UserBase(BaseModel):
     username: str
     role: str
 
+class UserCreate(UserBase):
+    password: str
+    student_id: int | None = None
+
 class User(UserBase):
     id: int
     student_id: int | None = None
+    is_password_changed: bool = False
+    initial_password: str | None = None
 
     class Config:
         orm_mode = True
+
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+class PasswordReset(BaseModel):
+    new_password: str
 
 class Token(BaseModel):
     access_token: str
