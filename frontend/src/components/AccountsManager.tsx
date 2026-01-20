@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, Select, Tag, message, Card, Popover, Tooltip } from 'antd';
 import { DeleteOutlined, PlusOutlined, EyeOutlined, EyeInvisibleOutlined, KeyOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
 
@@ -11,6 +12,7 @@ interface AccountsManagerProps {
 }
 
 export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, apiUrl }) => {
+    const { t } = useTranslation();
     const [users, setUsers] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
@@ -24,8 +26,14 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
             const token = localStorage.getItem('token');
             const res = await axios.get(`${apiUrl}/users`, { headers: { Authorization: `Bearer ${token}` } });
             setUsers(res.data);
-        } catch (e) {
-            // console.error(e);
+        } catch (e: any) {
+            console.error(e);
+            if (e.response?.status === 401) {
+                message.error('Session expired. Please login again.');
+                // Optional: Redirect to login
+            } else {
+                message.error('Failed to load users');
+            }
         }
     };
 
@@ -39,7 +47,7 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
             };
 
             await axios.post(`${apiUrl}/users`, payload, { headers: { Authorization: `Bearer ${token}` } });
-            message.success('User created');
+            message.success(t('accounts.user_created'));
             setIsModalOpen(false);
             form.resetFields();
             fetchUsers();
@@ -71,19 +79,19 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
         try {
             const token = localStorage.getItem('token');
             await axios.post(`${apiUrl}/users/${resetUserId}/reset-password`, { new_password: values.new_password }, { headers: { Authorization: `Bearer ${token}` } });
-            message.success('Password reset successfully');
+            message.success(t('accounts.password_changed'));
             setResetUserId(null);
             resetForm.resetFields();
             fetchUsers();
         } catch (e: any) {
-            message.error('Failed to reset password');
+            message.error(t('common.error'));
         }
     };
 
     const columns = [
-        { title: 'Username', dataIndex: 'username', key: 'username' },
+        { title: t('accounts.username'), dataIndex: 'username', key: 'username' },
         {
-            title: 'Role',
+            title: t('accounts.role'),
             dataIndex: 'role',
             key: 'role',
             render: (r: string) => (
@@ -93,30 +101,30 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
             )
         },
         {
-            title: 'Password',
+            title: t('accounts.password'),
             key: 'password',
             align: 'center' as const,
             render: (_: any, r: any) => {
                 if (r.is_password_changed) {
                     return (
-                        <Tooltip title="User has changed password">
+                        <Tooltip title={t('accounts.password_changed')}>
                             <EyeInvisibleOutlined style={{ color: '#ccc', fontSize: '18px' }} />
                         </Tooltip>
                     );
                 }
                 return (
-                    <Popover content={r.initial_password} title="Initial Password" trigger="click">
+                    <Popover content={r.initial_password} title={t('accounts.initial_password')} trigger="click">
                         <EyeOutlined style={{ color: '#1890ff', fontSize: '18px', cursor: 'pointer' }} />
                     </Popover>
                 );
             }
         },
         {
-            title: 'Action',
+            title: t('common.action'),
             key: 'action',
             render: (_: any, r: any) => (
                 <>
-                    <Tooltip title="Reset Password">
+                    <Tooltip title={t('accounts.reset_password')}>
                         <Button
                             icon={<KeyOutlined />}
                             style={{ marginRight: 8 }}
@@ -129,7 +137,7 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
                         onClick={() => handleDelete(r.id)}
                         disabled={r.username === currentUser?.username}
                     >
-                        Delete
+                        {t('common.delete')}
                     </Button>
                 </>
             )
@@ -137,22 +145,22 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
     ];
 
     return (
-        <Card title="Account Management" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>Add User</Button>}>
+        <Card title={t('menu.accounts')} extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>{t('accounts.add_user')}</Button>}>
             <Table dataSource={users} columns={columns} rowKey="id" />
             <Modal
-                title="Create User"
+                title={t('accounts.add_user')}
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
             >
                 <Form form={form} onFinish={handleCreate} layout="vertical">
-                    <Form.Item name="username" label="Username" rules={[{ required: true, message: 'Please input username!' }]}>
+                    <Form.Item name="username" label={t('accounts.username')} rules={[{ required: true, message: 'Please input username!' }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="password" label="Password" rules={[{ required: true, message: 'Please input password!' }]}>
+                    <Form.Item name="password" label={t('accounts.password')} rules={[{ required: true, message: 'Please input password!' }]}>
                         <Input.Password />
                     </Form.Item>
-                    <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+                    <Form.Item name="role" label={t('accounts.role')} rules={[{ required: true }]}>
                         <Select>
                             <Option value="admin">Admin</Option>
                             <Option value="teacher">Teacher</Option>
@@ -162,7 +170,7 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
                     <Form.Item
                         name="student_id"
                         label="Link Student ID (Parent only)"
-                        help="System ID (e.g. 1)"
+                        help={t('accounts.username') === 'parent' ? "System ID" : ""}
                     >
                         <Input type="number" />
                     </Form.Item>
@@ -170,13 +178,13 @@ export const AccountsManager: React.FC<AccountsManagerProps> = ({ currentUser, a
             </Modal>
 
             <Modal
-                title="Reset Password"
+                title={t('accounts.reset_password')}
                 open={!!resetUserId}
                 onCancel={() => setResetUserId(null)}
                 onOk={() => resetForm.submit()}
             >
                 <Form form={resetForm} onFinish={handleResetPassword} layout="vertical">
-                    <Form.Item name="new_password" label="New Password" rules={[{ required: true, min: 6 }]}>
+                    <Form.Item name="new_password" label={t('accounts.password')} rules={[{ required: true, min: 6 }]}>
                         <Input.Password />
                     </Form.Item>
                 </Form>

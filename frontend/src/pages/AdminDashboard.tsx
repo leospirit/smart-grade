@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, Upload, Table, message, Card, Statistic, Row, Col, Select, Segmented, Dropdown, Input, Modal, Steps, Divider, Alert, Form } from 'antd';
-import { UploadOutlined, UserOutlined, BookOutlined, BarChartOutlined, InboxOutlined, EyeOutlined, EyeInvisibleOutlined, CloudUploadOutlined, LineChartOutlined, DeleteOutlined, PlusOutlined, ArrowRightOutlined, KeyOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
+import { Layout, Menu, Button, Upload, Table, message, Card, Statistic, Row, Col, Select, Segmented, Dropdown, Input, Modal, Steps, Divider, Alert, Form, Space, Avatar } from 'antd';
+import { UploadOutlined, UserOutlined, BookOutlined, BarChartOutlined, InboxOutlined, EyeOutlined, EyeInvisibleOutlined, CloudUploadOutlined, LineChartOutlined, DeleteOutlined, PlusOutlined, ArrowRightOutlined, KeyOutlined, GlobalOutlined, DownOutlined, LogoutOutlined } from '@ant-design/icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ScatterChart, Scatter, LabelList, LineChart, Line } from 'recharts';
 import axios from 'axios';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
@@ -9,6 +10,7 @@ import { useReactToPrint } from 'react-to-print';
 import { StudentReport } from '../components/StudentReport';
 import { CSS } from '@dnd-kit/utilities';
 import { AccountsManager } from '../components/AccountsManager';
+import { ClassStatistics } from '../components/ClassStatistics';
 const { Header, Content, Footer, Sider } = Layout;
 const { Dragger } = Upload;
 const { Option } = Select;
@@ -48,7 +50,13 @@ interface Student {
 }
 
 export const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('roster');
+  const { t, i18n } = useTranslation();
+  const [activeTab, setActiveTab] = useState('analytics');
+
+  const changeLanguage = () => {
+    i18n.changeLanguage(i18n.language === 'en' ? 'zh' : 'en');
+  };
+
   const [currentUser, setCurrentUser] = useState<{ username: string, role: string } | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
@@ -251,11 +259,11 @@ export const AdminDashboard = () => {
     };
 
     return (
-      <Card title="Initialize Class Roster" bordered={false}>
-        <p style={{ marginBottom: 20 }}>Please upload an Excel with columns: <b>学号, 姓名, 班级</b>.</p>
+      <Card title={t('menu.roster')} bordered={false}>
+        <p style={{ marginBottom: 20 }}>{t('upload.support_excel')} (Student ID, Name, Class).</p>
         <Dragger {...props}>
           <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-          <p className="ant-upload-text">Click or drag file to this area to upload Roster</p>
+          <p className="ant-upload-text">{t('upload.click_to_upload')}</p>
         </Dragger>
       </Card>
     )
@@ -263,9 +271,9 @@ export const AdminDashboard = () => {
 
   const UploadGrade = () => {
     return (
-      <Card title="Upload Course Grades" bordered={false}>
+      <Card title={t('menu.grades')} bordered={false}>
         <div style={{ marginBottom: 20 }}>
-          <span>Course Name: </span>
+          <span>{t('analytics.subject')}: </span>
           <Select
             style={{ width: 200 }}
             value={courseName}
@@ -276,7 +284,7 @@ export const AdminDashboard = () => {
                 {menu}
                 <div style={{ padding: '8px', borderTop: '1px solid #e8e8e8' }}>
                   <Input.Search
-                    placeholder="Add new subject"
+                    placeholder={t('common.search')}
                     enterButton={<PlusOutlined />}
                     size="small"
                     onSearch={(val) => {
@@ -295,18 +303,18 @@ export const AdminDashboard = () => {
         </div>
 
         <Button type="primary" icon={<CloudUploadOutlined />} onClick={() => setIsWizardOpen(true)} size="large" block style={{ height: 60, fontSize: 18 }}>
-          Start Import Wizard
+          {t('upload.confirm_import')}
         </Button>
-        <p style={{ marginTop: 10, color: '#666' }}>Supports Excel files with custom headers.</p>
-        <p style={{ fontSize: 12, color: '#999' }}>System will ask you to map columns (Student ID, Name, Score).</p>
+        <p style={{ marginTop: 10, color: '#666' }}>{t('upload.support_excel')}</p>
+        <p style={{ fontSize: 12, color: '#999' }}>{t('upload.select_columns')}</p>
 
         <Modal
-          title="Import Grade Wizard"
+          title={t('menu.grades')}
           open={isWizardOpen}
           onCancel={() => setIsWizardOpen(false)}
           footer={currentStep === 1 ? [
-            <Button key="back" onClick={() => setCurrentStep(0)}>Back</Button>,
-            <Button key="submit" type="primary" loading={isImporting} onClick={handleConfirmImport}>Confirm Import</Button>
+            <Button key="back" onClick={() => setCurrentStep(0)}>{t('common.cancel')}</Button>,
+            <Button key="submit" type="primary" loading={isImporting} onClick={handleConfirmImport}>{t('upload.confirm_import')}</Button>
           ] : null}
           width={800}
         >
@@ -378,9 +386,9 @@ export const AdminDashboard = () => {
 
     const columns: any[] = [
       { title: 'ID', dataIndex: 'student_number', key: 'student_number', width: 100, fixed: 'left' },
-      { title: 'Name', dataIndex: 'name', key: 'name', width: 100, fixed: 'left' },
+      { title: t('analytics.student'), dataIndex: 'name', key: 'name', width: 100, fixed: 'left' },
       {
-        title: 'Class',
+        title: t('analytics.class'),
         dataIndex: 'class_name',
         key: 'class_name',
         width: 100,
@@ -403,7 +411,7 @@ export const AdminDashboard = () => {
                   handleToggleVisibility(c);
                 }}
                 style={{ cursor: 'pointer', marginLeft: 8, color: isVisible ? '#52c41a' : '#bfbfbf' }}
-                title={isVisible ? "Visible to Parents" : "Hidden from Parents"}
+                title={isVisible ? t('common.visible') : t('common.hidden')}
               >
                 {isVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
               </span>
@@ -412,7 +420,7 @@ export const AdminDashboard = () => {
               style={{ color: 'red', cursor: 'pointer', marginLeft: 8 }}
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Are you sure you want to delete ${c}? This cannot be undone.`)) {
+                if (confirm(t('accounts.delete_confirm'))) {
                   handleDeleteCourse(c);
                 }
               }}
@@ -451,9 +459,9 @@ export const AdminDashboard = () => {
     };
 
     return (
-      <Card title="Student Roster" extra={
+      <Card title={t('menu.roster')} extra={
         <Button type="primary" icon={<UploadOutlined />} onClick={() => handleExport()}>
-          Export Roster (Locked)
+          {t('common.upload')} / Export
         </Button>
       }>
         <Table
@@ -501,14 +509,14 @@ export const AdminDashboard = () => {
         const s = students.find(st => st.id === Number(selectedStudentId));
         if (s) {
           if (s.grade_name && s.grade_name !== selectedGrade) setSelectedGrade(s.grade_name);
-          if (s.class_name !== selectedClass) setSelectedClass(s.class_name);
+          if (!selectedClass.includes(s.class_name)) setSelectedClass([s.class_name]);
         }
       }
     }, [selectedStudentId]);
 
     // Grade/Class Filter State
     const [selectedGrade, setSelectedGrade] = useState<string>('All');
-    const [selectedClass, setSelectedClass] = useState<string>('All');
+    const [selectedClass, setSelectedClass] = useState<string[]>(['All']);
 
     // Scatter Plot State
     const [scatterX, setScatterX] = useState<string>(courseList[0] || 'English');
@@ -559,15 +567,18 @@ export const AdminDashboard = () => {
     )).sort();
 
     // 3. Filtered Students (Source of Truth for Charts)
+    // 3. Filtered Students (Source of Truth for Charts)
     const filteredStudents = students.filter(s => {
       const matchGrade = selectedGrade === 'All' || s.grade_name === selectedGrade;
-      const matchClass = selectedClass === 'All' || s.class_name === selectedClass;
+      // Multi-class filter: if 'All' is present, ignore filter. Else check inclusion.
+      const matchClass = selectedClass.includes('All') || selectedClass.includes(s.class_name);
       return matchGrade && matchClass;
     });
 
     // Reset Class when Grade changes
+    // Reset Class when Grade changes
     useEffect(() => {
-      if (selectedGrade !== 'All') setSelectedClass('All');
+      if (selectedGrade !== 'All') setSelectedClass(['All']);
     }, [selectedGrade]);
 
     // --- Data Preparation ---
@@ -682,7 +693,7 @@ export const AdminDashboard = () => {
       if (data.length === 0) {
         return (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
-            Select a Student and a Subject to view Trend Analysis.
+            {t('analytics.trend_placeholder')}
           </div>
         )
       }
@@ -704,10 +715,13 @@ export const AdminDashboard = () => {
       <ResponsiveContainer>
         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={getRadarData()}>
           <PolarGrid />
-          <PolarAngleAxis dataKey="subject" />
+          <PolarAngleAxis dataKey="subject" tickFormatter={(val) => {
+            // Try to find translation for known subjects, otherwise fallback to val
+            return i18n.exists(`subjects.${val}`) ? t(`subjects.${val}`) : val;
+          }} />
           <PolarRadiusAxis angle={30} />
-          <Radar name="Class Avg" dataKey="ClassAvg" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-          {selectedStudentId && <Radar name="Student" dataKey="StudentScore" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.8} />}
+          <Radar name={t('stats.avg_score')} dataKey="ClassAvg" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+          {selectedStudentId && <Radar name={t('analytics.student')} dataKey="StudentScore" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.8} />}
           <Legend />
           <Tooltip />
         </RadarChart>
@@ -737,7 +751,7 @@ export const AdminDashboard = () => {
           <YAxis type="number" dataKey="y" name={scatterY} unit="pts" domain={[0, 100]} />
           <Tooltip cursor={{ strokeDasharray: '3 3' }} />
           <Legend />
-          <Scatter name="Students" data={getScatterData()} fill="#8884d8" />
+          <Scatter name={t('analytics.student')} data={getScatterData()} fill="#8884d8" />
         </ScatterChart>
       </ResponsiveContainer>
     );
@@ -767,8 +781,8 @@ export const AdminDashboard = () => {
           <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
             <thead>
               <tr>
-                <th style={{ padding: 8, border: '1px solid #eee' }}>Student</th>
-                <th style={{ padding: 8, border: '1px solid #eee' }}>Class</th>
+                <th style={{ padding: 8, border: '1px solid #eee' }}>{t('analytics.student')}</th>
+                <th style={{ padding: 8, border: '1px solid #eee' }}>{t('analytics.class')}</th>
                 {courseList.map(c => <th key={c} style={{ padding: 8, border: '1px solid #eee' }}>{c}</th>)}
               </tr>
             </thead>
@@ -797,7 +811,7 @@ export const AdminDashboard = () => {
           </table>
           {limit && !selectedStudentId && getHeatmapStudents().length > limit && (
             <div style={{ textAlign: 'center', padding: 8, fontStyle: 'italic', color: '#888' }}>
-              ... and {getHeatmapStudents().length - limit} more students (Full list available in Heatmap View) ...
+              {t('analytics.more_students', { count: getHeatmapStudents().length - limit })}
             </div>
           )}
         </div>
@@ -811,12 +825,13 @@ export const AdminDashboard = () => {
             <div className="no-print" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
               <Segmented
                 options={[
-                  { label: 'Radar', value: 'Radar', icon: <BarChartOutlined /> },
-                  { label: 'Dist.', value: 'Bar', icon: <BarChartOutlined rotate={90} /> },
-                  { label: 'Trend', value: 'Trend', icon: <LineChartOutlined /> },
-                  { label: 'Scatter', value: 'Scatter', icon: <BarChartOutlined /> },
-                  { label: 'Map', value: 'Heatmap', icon: <BookOutlined /> },
-                  { label: 'Report', value: 'Report', icon: <InboxOutlined /> },
+                  { label: t('analytics.radar'), value: 'Radar', icon: <BarChartOutlined /> },
+                  { label: t('analytics.distribution'), value: 'Bar', icon: <BarChartOutlined rotate={90} /> },
+                  { label: t('analytics.trend'), value: 'Trend', icon: <LineChartOutlined /> },
+                  { label: t('analytics.scatter'), value: 'Scatter', icon: <BarChartOutlined /> },
+                  { label: t('analytics.map'), value: 'Heatmap', icon: <BookOutlined /> },
+                  { label: t('analytics.report'), value: 'Report', icon: <InboxOutlined /> },
+                  { label: t('analytics.stats'), value: 'Stats', icon: <BarChartOutlined /> },
                 ]}
                 value={chartMode}
                 onChange={setChartMode}
@@ -825,7 +840,7 @@ export const AdminDashboard = () => {
               {chartMode === 'Report' && (
                 <>
                   <Select
-                    placeholder="Select Student for Report"
+                    placeholder={t('analytics.select_student')}
                     style={{ width: 200, marginLeft: 16 }}
                     showSearch
                     optionFilterProp="children"
@@ -839,16 +854,16 @@ export const AdminDashboard = () => {
                   </Select>
 
                   <Select
-                    placeholder="Select Subject"
+                    placeholder={t('analytics.select_subject')}
                     style={{ width: 150, marginLeft: 16 }}
                     value={selectedCourse}
                     onChange={setSelectedCourse}
                   >
-                    <Option value="All">Overview</Option>
+                    <Option value="All">{t('analytics.overview')}</Option>
                     {courseList.map(c => <Option key={c} value={c}>{c}</Option>)}
                   </Select>
                   <Button type="default" style={{ marginLeft: 16 }} onClick={handleResetLayout}>
-                    Reset Layout
+                    {t('analytics.reset_layout')}
                   </Button>
 
                   {['Radar', 'Bar', 'Scatter', 'Heatmap'].filter(c => !reportItems.includes(c)).length > 0 && (
@@ -858,28 +873,28 @@ export const AdminDashboard = () => {
                           .filter(c => !reportItems.includes(c))
                           .map(c => ({
                             key: c,
-                            label: c,
+                            label: c, // These are internal keys, but could be mapped if needed
                             onClick: () => setReportItems(prev => [...prev, c])
                           }))
                       }}
                     >
                       <Button style={{ marginLeft: 16 }} icon={<PlusOutlined />}>
-                        Add Chart
+                        {t('analytics.add_chart')}
                       </Button>
                     </Dropdown>
                   )}
 
                   <Button icon={<EyeOutlined />} onClick={() => setIsVisModalOpen(true)} style={{ marginLeft: 16 }}>
-                    Visibility
+                    {t('analytics.visibility_mgmt')}
                   </Button>
 
                   <Button type="primary" style={{ marginLeft: 16 }} onClick={() => window.print()}>
-                    Print Report
+                    {t('analytics.print_report')}
                   </Button>
 
-                  <Modal title="Manage Course Visibility (Parent Portal)" open={isVisModalOpen} onCancel={() => setIsVisModalOpen(false)} footer={null}>
+                  <Modal title={t('analytics.parent_portal_visibility')} open={isVisModalOpen} onCancel={() => setIsVisModalOpen(false)} footer={null}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <p style={{ color: '#999', fontSize: 12 }}>Controls which subjects are visible to parents.</p>
+                      <p style={{ color: '#999', fontSize: 12 }}>{t('analytics.controls_visibility')}</p>
                       {courseList.map(c => {
                         const isVisible = courseVisibility[c] !== false;
                         return (
@@ -890,7 +905,7 @@ export const AdminDashboard = () => {
                               icon={isVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
                               onClick={() => handleToggleVisibility(c)}
                             >
-                              {isVisible ? 'Visible' : 'Hidden'}
+                              {isVisible ? t('analytics.visible_status') : t('analytics.hidden_status')}
                             </Button>
                           </div>
                         )
@@ -902,54 +917,88 @@ export const AdminDashboard = () => {
               )}
             </div>
             <div>
-              <Statistic title="Total Students" value={filteredStudents.length} valueStyle={{ fontSize: 16 }} prefix={<UserOutlined />} />
+              <Statistic title={t('stats.total_students')} value={filteredStudents.length} valueStyle={{ fontSize: 16 }} prefix={<UserOutlined />} />
             </div>
           </div>
 
           {/* Hierarchy Filter */}
-          <Card type="inner" title="Organization Filter" style={{ marginBottom: 20, background: '#f9f9f9' }}>
+          <Card type="inner" title={t('analytics.org_filter')} style={{ marginBottom: 20, background: '#f9f9f9' }}>
             <Row gutter={16}>
               <Col span={8}>
-                <b>Grade: </b>
+                <b>{t('analytics.grade')}: </b>
                 <Select style={{ width: '100%' }} value={selectedGrade} onChange={setSelectedGrade}>
-                  <Option value="All">All Grades</Option>
+                  <Option value="All">{t('analytics.all_grades')}</Option>
                   {availableGrades.map(g => <Option key={g} value={g}>{g}</Option>)}
                 </Select>
               </Col>
               <Col span={8}>
-                <b>Class: </b>
-                <Select style={{ width: '100%' }} value={selectedClass} onChange={setSelectedClass}>
-                  <Option value="All">All Classes</Option>
+                <b>{t('analytics.class')}: </b>
+                <Select
+                  mode="multiple"
+                  style={{ width: '100%' }}
+                  placeholder={t('analytics.select_classes')}
+                  value={selectedClass}
+                  onChange={(val) => {
+                    const values = val as string[];
+                    if (values.includes('All')) {
+                      // If 'All' is selected, clear others or just keep 'All'?
+                      // Let's say if they select 'All', it overrides everything else
+                      if (selectedClass.includes('All') && values.length > 1) {
+                        // Unselecting 'All' or selecting specific?
+                        // If All was there, and now more added, remove All?
+                        // Simple logic: if new selection contains 'All', use just 'All' ONLY if it was the last selected item?
+                        // Actually simpler: if val contains 'All' and other things, logic is tricky.
+                        // Let's do: If user selects 'All', set to ['All']. If user selects specifics, remove 'All'.
+                        const last = values[values.length - 1];
+                        if (last === 'All') setSelectedClass(['All']);
+                        else setSelectedClass(values.filter(v => v !== 'All'));
+                      } else {
+                        // 'All' was not present, or 'All' is the only thing
+                        if (values.includes('All')) setSelectedClass(['All']);
+                        else setSelectedClass(values);
+                      }
+                    } else {
+                      setSelectedClass(values);
+                    }
+                  }}
+                  showSearch
+                  allowClear
+                  maxTagCount="responsive"
+                >
+                  <Option value="All">{t('analytics.all_classes')}</Option>
                   {availableClasses.map(c => <Option key={c} value={c}>{c}</Option>)}
                 </Select>
               </Col>
-              <Col span={8}>
-                <b>Student: </b>
-                <Select
-                  showSearch
-                  style={{ width: '100%' }}
-                  placeholder="All Students"
-                  optionFilterProp="children"
-                  allowClear
-                  value={selectedStudentId}
-                  onChange={setSelectedStudentId}
-                >
-                  {filteredStudents.map(s => (
-                    <Option key={s.id} value={String(s.id)}>{s.name} ({s.student_number})</Option>
-                  ))}
-                </Select>
-              </Col>
+              {chartMode !== 'Stats' && (
+                <Col span={8}>
+                  <b>{t('analytics.student')}: </b>
+                  <Select
+                    showSearch
+                    style={{ width: '100%' }}
+                    placeholder={t('analytics.all_students')}
+                    optionFilterProp="children"
+                    allowClear
+                    value={selectedStudentId}
+                    onChange={setSelectedStudentId}
+                  >
+                    {filteredStudents.map(s => (
+                      <Option key={s.id} value={String(s.id)}>{s.name} ({s.student_number})</Option>
+                    ))}
+                  </Select>
+                </Col>
+              )}
             </Row>
           </Card>
 
           {/* Chart Zone */}
           <div style={{ marginBottom: 20 }}>
             {/* Mode specific extra filters (e.g. Scatters) could go here if needed, but keeping it clean for now */}
+            {/* Mode specific extra filters (e.g. Scatters) could go here if needed, but keeping it clean for now */}
             {chartMode === 'Bar' && (
               <div style={{ marginBottom: 10 }}>
-                <b>Subject: </b>
+                <b>{t('analytics.subject')}: </b>
                 <Select value={selectedCourse} onChange={setSelectedCourse} style={{ width: 150 }}>
-                  <Option value="All">Average</Option>
+                  <Option value="All">{t('analytics.average')}</Option>
                   {courseList.map(c => <Option key={c} value={c}>{c}</Option>)}
                 </Select>
               </div>
@@ -971,15 +1020,26 @@ export const AdminDashboard = () => {
                 <Select value={scatterY} onChange={setScatterY} style={{ width: 120 }}>{courseList.map(c => <Option key={c} value={c}>{c}</Option>)}</Select>
               </div>
             )}
+            {chartMode === 'Stats' && (
+              <div style={{ marginBottom: 10 }}>
+                <b>Subject: </b>
+                <Select value={selectedCourse} onChange={setSelectedCourse} style={{ width: 150 }}>
+                  <Option value="All">Overview</Option>
+                  {courseList.map(c => <Option key={c} value={c}>{c}</Option>)}
+                </Select>
+              </div>
+            )}
           </div>
 
 
           <Card title={chartMode === 'Report' ? 'Report Board (Drag to Reorder)' : `${chartMode} View`} bordered={false}>
-            <div style={{ width: '100%', height: chartMode === 'Heatmap' ? 'auto' : (chartMode === 'Report' ? 'auto' : 500), minHeight: 400 }}>
+            <div style={{ width: '100%', height: chartMode === 'Heatmap' ? 'auto' : (chartMode === 'Report' || chartMode === 'Stats' ? 'auto' : 500), minHeight: 400 }}>
               {chartMode === 'Radar' && renderRadar()}
               {chartMode === 'Bar' && renderBar()}
               {chartMode === 'Scatter' && renderScatter()}
               {chartMode === 'Heatmap' && renderHeatmap()}
+              {chartMode === 'Trend' && renderTrend()}
+              {chartMode === 'Stats' && <ClassStatistics students={filteredStudents} courseList={courseList} courseName={selectedCourse} />}
 
               {chartMode === 'Report' && (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1033,25 +1093,56 @@ export const AdminDashboard = () => {
           mode="inline"
           onClick={(e) => setActiveTab(e.key)}
           items={[
-            { key: 'roster', icon: <UserOutlined />, label: 'Student Roster' },
-            { key: 'grades', icon: <CloudUploadOutlined />, label: 'Upload Grades' },
-            { key: 'analytics', icon: <BarChartOutlined />, label: 'Analytics' },
-            ...(currentUser?.role === 'admin' ? [{ key: 'accounts', icon: <UserOutlined />, label: 'Accounts' }] : [])
+            { key: 'analytics', icon: <BarChartOutlined />, label: t('menu.analytics') }, // Reordered to be first? Or just keep current order.
+            { key: 'roster', icon: <UserOutlined />, label: t('menu.roster') },
+            { key: 'grades', icon: <CloudUploadOutlined />, label: t('menu.grades') },
+            ...(currentUser?.role === 'admin' ? [{ key: 'accounts', icon: <UserOutlined />, label: t('menu.accounts') }] : [])
           ]}
         />
       </Sider>
       <Layout className="site-layout">
         <Header className="site-layout-background" style={{ padding: '0 24px', background: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-          {currentUser && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span>Welcome, <b>{currentUser.username}</b> ({currentUser.role})</span>
-              <Button icon={<KeyOutlined />} onClick={() => setIsChangePassOpen(true)}>Change Password</Button>
-              <Button onClick={() => {
-                localStorage.clear();
-                window.location.href = '/login';
-              }}>Logout</Button>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Button
+              onClick={changeLanguage}
+              icon={<GlobalOutlined />}
+              style={{ marginRight: 16 }}
+            >
+              {i18n.language === 'en' ? '中文' : 'English'}
+            </Button>
+            {currentUser && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <Dropdown menu={{
+                  items: [
+                    {
+                      key: 'logout',
+                      icon: <LogoutOutlined />,
+                      label: t('common.logout'),
+                      onClick: () => {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
+                      }
+                    }
+                  ]
+                }} trigger={['click']}>
+                  <a onClick={e => e.preventDefault()}>
+                    <Space>
+                      <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#87d068' }} />
+                      <span style={{ color: '#333' }}>{currentUser.username} ({currentUser.role})</span>
+                      <DownOutlined style={{ color: '#333' }} />
+                    </Space>
+                  </a>
+                </Dropdown>
+                <Button
+                  type="primary"
+                  icon={<KeyOutlined />}
+                  onClick={() => setIsChangePassOpen(true)}
+                >
+                  {t('accounts.change_password')}
+                </Button>
+              </div>
+            )}
+          </div>
         </Header>
         <Content style={{ margin: '16px' }}>
           <div className="site-layout-background" style={{ padding: 24, minHeight: 360 }}>
@@ -1071,10 +1162,10 @@ export const AdminDashboard = () => {
             {activeTab === 'analytics' && <Analytics />}
 
             {activeTab === 'roster' && (
-              students.length === 0 ? <UploadRoster onSuccess={fetchStudents} /> : <StudentTable />
+              students.length === 0 ? <UploadRoster /> : <StudentTable />
             )}
 
-            {activeTab === 'grades' && <UploadGrade onUploadSuccess={fetchStudents} />}
+            {activeTab === 'grades' && <UploadGrade />}
 
             {activeTab === 'accounts' && <AccountsManager currentUser={currentUser} apiUrl={API_URL} />}
           </div>
